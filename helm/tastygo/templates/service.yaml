@@ -1,0 +1,27 @@
+
+{{- $root := . }}
+{{- $services := list
+  (dict "name" "frontend" "serviceName" "frontend-service" "port" .Values.frontend.port "targetPort" .Values.frontend.port)
+  (dict "name" "gateway" "serviceName" "gateway-service" "port" .Values.gateway.port "targetPort" .Values.gateway.port)
+  (dict "name" "user-service" "serviceName" "user-service" "port" .Values.userService.port "targetPort" .Values.userService.port)
+  (dict "name" "product-service" "serviceName" "product-service" "port" .Values.productService.port "targetPort" .Values.productService.port)
+  (dict "name" "order-service" "serviceName" "order-service" "port" .Values.orderService.port "targetPort" .Values.orderService.port)
+}}
+{{- range $service := $services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $service.serviceName }}
+  namespace: {{ $root.Values.namespace }}
+  labels:
+    app: {{ $service.name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ $service.port }}
+      targetPort: {{ $service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ $service.name }}
+{{- end }}

@@ -1,0 +1,110 @@
+
+{{- $root := . }}
+{{- $apps := list
+  (dict "name" "frontend" "image" .Values.frontend.image "replicas" .Values.frontend.replicas "port" .Values.frontend.port "probe" "/healthz")
+  (dict "name" "gateway" "image" .Values.gateway.image "replicas" .Values.gateway.replicas "port" .Values.gateway.port "probe" "/health")
+  (dict "name" "user-service" "image" .Values.userService.image "replicas" .Values.userService.replicas "port" .Values.userService.port "probe" "/health")
+  (dict "name" "product-service" "image" .Values.productService.image "replicas" .Values.productService.replicas "port" .Values.productService.port "probe" "/health")
+  (dict "name" "order-service" "image" .Values.orderService.image "replicas" .Values.orderService.replicas "port" .Values.orderService.port "probe" "/health")
+}}
+{{- range $app := $apps }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $app.name }}-deployment
+  namespace: {{ $root.Values.namespace }}
+  labels:
+    app: {{ $app.name }}
+spec:
+  replicas: {{ $app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $app.name }}
+    spec:
+      containers:
+        - name: {{ $app.name }}
+          image: {{ $app.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ $app.port }}
+{{- if eq $app.name "gateway" }}
+          env:
+            - name: USER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $root.Values.config.name }}
+                  key: USER_SERVICE_URL
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $root.Values.config.name }}
+                  key: PRODUCT_SERVICE_URL
+            - name: ORDER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $root.Values.config.name }}
+                  key: ORDER_SERVICE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secret.name }}
+                  key: JWT_SECRET
+{{- else if ne $app.name "frontend" }}
+          env:
+            - name: DB_HOST
+              value: {{ $root.Values.mysql.serviceName | quote }}
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $root.Values.config.name }}
+                  key: MYSQL_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $root.Values.config.name }}
+                  key: {{ if eq $app.name "user-service" }}USER_DATABASE{{ else if eq $app.name "product-service" }}PRODUCT_DATABASE{{ else }}ORDER_DATABASE{{ end }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secret.name }}
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secret.name }}
+                  key: DB_PASSWORD
+{{- if eq $app.name "user-service" }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secret.name }}
+                  key: JWT_SECRET
+{{- end }}
+{{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ $app.probe }}
+              port: {{ $app.port }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ $app.probe }}
+              port: {{ $app.port }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+{{- end }}

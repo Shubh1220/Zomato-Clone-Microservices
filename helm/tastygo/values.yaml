@@ -1,0 +1,47 @@
+
+namespace: my-zomato-app
+
+frontend:
+  image: my-zomato-frontend:latest
+  replicas: 1
+  port: 80
+
+gateway:
+  image: my-zomato-gateway:latest
+  replicas: 1
+  port: 4000
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+userService:
+  image: my-zomato-user-service:latest
+  replicas: 1
+  port: 4001
+
+productService:
+  image: my-zomato-product-service:latest
+  replicas: 1
+  port: 4002
+
+orderService:
+  image: my-zomato-order-service:latest
+  replicas: 1
+  port: 4003
+
+mysql:
+  externalExisting: true
+  serviceName: mysql-service
+  port: 3306
+
+config:
+  name: mysql-config-map
+
+secret:
+  name: mysql-secret
+
+ingress:
+  enabled: true
+  className: nginx

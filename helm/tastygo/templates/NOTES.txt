@@ -1,0 +1,15 @@
+
+TastyGo Helm chart has been rendered.
+
+Namespace: {{ .Values.namespace }}
+
+Services:
+- Frontend: frontend-service:{{ .Values.frontend.port }}
+- Gateway: gateway-service:{{ .Values.gateway.port }}
+- User service: user-service:{{ .Values.userService.port }}
+- Product service: product-service:{{ .Values.productService.port }}
+- Order service: order-service:{{ .Values.orderService.port }}
+
+Ingress class: {{ .Values.ingress.className }}
+
+Review the rendered manifests before installing or upgrading this chart.
