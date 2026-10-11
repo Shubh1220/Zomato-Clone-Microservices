@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: my-zomato-app
+
+spec:
+  clusterIP: None
+
+  selector:
+    app: mysql
+
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-statefulset
+  namespace: my-zomato-app
+
+spec:
+  serviceName: mysql-service
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: mysql
+
+  template:
+    metadata:
+      labels:
+        app: mysql
+
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: DB_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: DB_PASSWORD
+
+            # Used by the initialization script
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: DB_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: DB_PASSWORD
+
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+
+            - name: mysql-init
+              mountPath: /docker-entrypoint-initdb.d/01-init.sql
+              subPath: 01-init.sql
+
+            - name: mysql-grants
+              mountPath: /docker-entrypoint-initdb.d/02-grants.sh
+              subPath: 02-grants.sh
+
+      volumes:
+        - name: mysql-init
+          configMap:
+            name: mysql-init-config
+
+        - name: mysql-grants
+          configMap:
+            name: mysql-grants-config
+            defaultMode: 0755
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+
+      spec:
+        accessModes:
+          - ReadWriteOnce
+
+        resources:
+          requests:
+            storage: 1Gi

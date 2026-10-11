@@ -1,0 +1,39 @@
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-zomato-frontend-ingress
+  namespace: my-zomato-app
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-zomato-gateway-ingress
+  namespace: my-zomato-app
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /gateway(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gateway-service
+                port:
+                  number: 4000

@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-config
+  namespace: my-zomato-app
+
+data:
+  01-init.sql: |
+    CREATE DATABASE IF NOT EXISTS userdb;
+    CREATE DATABASE IF NOT EXISTS productdb;
+    CREATE DATABASE IF NOT EXISTS orderdb;
+
+    USE userdb;
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      email VARCHAR(150) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    USE productdb;
+
+    CREATE TABLE IF NOT EXISTS restaurants (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      location VARCHAR(255),
+      cuisine VARCHAR(100),
+      rating DECIMAL(2,1) DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS menu_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      restaurant_id INT NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      description TEXT,
+      price DECIMAL(10,2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    USE orderdb;
+
+    CREATE TABLE IF NOT EXISTS orders (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      total_amount DECIMAL(10,2) NOT NULL,
+      status VARCHAR(50) DEFAULT 'PLACED',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS order_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      product_id INT NOT NULL,
+      quantity INT NOT NULL,
+      price DECIMAL(10,2) NOT NULL
+    );

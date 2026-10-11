@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-grants-config
+  namespace: my-zomato-app
+
+data:
+  02-grants.sh: |
+    #!/bin/bash
+    set -e
+
+    mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
+      GRANT ALL PRIVILEGES ON userdb.* TO '${DB_USER}'@'%';
+      GRANT ALL PRIVILEGES ON productdb.* TO '${DB_USER}'@'%';
+      GRANT ALL PRIVILEGES ON orderdb.* TO '${DB_USER}'@'%';
+
+      FLUSH PRIVILEGES;
+    EOSQL

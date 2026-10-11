@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config-map
+  namespace: my-zomato-app
+
+data:
+  MYSQL_PORT: "3306"
+  USER_DATABASE: "userdb"
+  PRODUCT_DATABASE: "productdb"
+  ORDER_DATABASE: "orderdb"
+
+  NODE_ENV: "production"
+
+  USER_SERVICE_URL: "http://user-service:4001"
+  PRODUCT_SERVICE_URL: "http://product-service:4002"
+  ORDER_SERVICE_URL: "http://order-service:4003"
