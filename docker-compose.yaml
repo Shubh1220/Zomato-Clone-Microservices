@@ -1,0 +1,93 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [app_net]
+
+  user-service:
+    build: ./services/user-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_NAME: userdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 4001
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [app_net]
+
+  product-service:
+    build: ./services/product-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_NAME: productdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PORT: 4002
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [app_net]
+
+  order-service:
+    build: ./services/order-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_NAME: orderdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      STAGE_INTERVAL_MS: ${STAGE_INTERVAL_MS:-8000}
+      PORT: 4003
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [app_net]
+
+  gateway:
+    build: ./services/gateway
+    restart: unless-stopped
+    environment:
+      USER_SERVICE_URL: http://user-service:4001
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      ORDER_SERVICE_URL: http://order-service:4003
+      PORT: 4000
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks: [app_net]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    depends_on:
+      - gateway
+    networks: [app_net]
+
+networks:
+  app_net:
+    driver: bridge
+
+volumes:
+  db_data:
