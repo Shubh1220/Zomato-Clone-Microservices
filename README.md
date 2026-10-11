@@ -153,9 +153,9 @@ zomato-clone-microservices/
 |---|---|
 | Docker | every phase (building images, Compose, KIND) |
 | Node.js 20+ | running services or the frontend without Docker |
-| `kind`, `kubectl`, `helm` | Phases 2 and 3 |
-| Terraform >= 1.5 (or OpenTofu), AWS CLI v2, AWS account | Phase 4 |
-| A Jenkins host (EC2 suggested) with docker, aws, kubectl, helm, trivy | Phase 5 |
+| `kind`, `kubectl`, `helm` | running deployment or services |
+| Terraform >= 1.5  AWS CLI v2, AWS account | initialisation, validation and format code |
+| A Jenkins host (EC2 suggested) with docker, aws, kubectl, helm, trivy | pipeline stages |
 
 ## Phase 1: Application
 
