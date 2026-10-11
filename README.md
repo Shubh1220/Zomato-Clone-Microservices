@@ -50,25 +50,6 @@ Each phase builds on the previous one, and each folder has its own README with m
 
 ![TastyGo runtime architecture](images/architecture.gif)
 
-<details>
-<summary>Static version (Mermaid)</summary>
-
-```mermaid
-flowchart TD
-    U[User / Browser] --> I["Ingress<br/>(nginx on KIND, ALB on EKS)"]
-    I -->|"/"| F["frontend<br/>React + nginx"]
-    I -->|"/api"| G["gateway<br/>Express reverse proxy"]
-    G --> US["user-service<br/>register, login, JWT"]
-    G --> PS["product-service<br/>restaurants, menus"]
-    G --> OS["order-service<br/>checkout, status, history"]
-    OS -->|"validate items and prices"| PS
-    US --> UDB[("userdb")]
-    PS --> PDB[("productdb")]
-    OS --> ODB[("orderdb")]
-```
-
-</details>
-
 - The frontend only ever calls `/api` on its own origin. With Docker Compose the frontend's nginx
   forwards `/api` to the gateway; on Kubernetes the Ingress routes `/api` to the gateway directly.
 - **Each service owns its own database** (`userdb`, `productdb`, `orderdb`) on one MySQL server.
@@ -81,22 +62,6 @@ flowchart TD
 ### Delivery pipeline
 
 ![TastyGo Jenkins CI/CD pipeline](images/pipeline.gif)
-
-<details>
-<summary>Static version (Mermaid)</summary>
-
-```mermaid
-flowchart LR
-    Dev[Developer] -->|git push| GH[GitHub]
-    GH -->|webhook| J[Jenkins]
-    J --> V["Validate<br/>Helm chart"]
-    V --> B["Build + Trivy scan<br/>5 images in parallel"]
-    B -->|"main only"| P[Push to ECR]
-    P --> D["helm upgrade --atomic<br/>to EKS"]
-    D --> S["Smoke test<br/>via ALB"]
-```
-
-</details>
 
 ### AWS footprint (Phase 4)
 
