@@ -1,3 +1,16 @@
+# Terraform downloaded files and local state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Terraform variable files may contain secrets
+*.tfvars
+*.tfvars.json
+
+# Sensitive files
 node_modules/
 dist/
 .env.example
