@@ -1,0 +1,24 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.35.1
+
+  - role: worker
+    image: kindest/node:v1.35.1
+
+  - role: worker
+    image: kindest/node:v1.35.1
+
+  - role: worker
+    image: kindest/node:v1.35.1
+    labels:
+      ingress-ready: "true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 9080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 9443
+        protocol: TCP
