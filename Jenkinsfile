@@ -24,7 +24,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Shubh1220/zomato-clone-microservices.git'
+                    url: 'https://github.com/Shubh1220/Zomato-Clone-Microservices.git'
             }
         }
 
