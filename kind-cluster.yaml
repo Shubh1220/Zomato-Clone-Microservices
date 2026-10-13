@@ -17,8 +17,8 @@ nodes:
       ingress-ready: "true"
     extraPortMappings:
       - containerPort: 80
-        hostPort: 9080
+        hostPort: 80
         protocol: TCP
       - containerPort: 443
-        hostPort: 9443
+        hostPort: 443
         protocol: TCP
