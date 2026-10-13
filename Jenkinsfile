@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        AWS_REGION       = 'eu-west-1'
+        AWS_REGION       = 'us-east-1'
         AWS_ACCOUNT_ID   = '615471834295'
         AWS_CREDENTIALS  = 'aws-credentials-id'
 
@@ -89,10 +89,10 @@ pipeline {
         stage('Build All 5 Images') {
             steps {
                 sh """
-                docker build -t ${ECR_REGISTRY}/tastygo/gateway:${IMAGE_TAG} ./gateway
-                docker build -t ${ECR_REGISTRY}/tastygo/user-service:${IMAGE_TAG} ./user-service
-                docker build -t ${ECR_REGISTRY}/tastygo/product-service:${IMAGE_TAG} ./product-service
-                docker build -t ${ECR_REGISTRY}/tastygo/order-service:${IMAGE_TAG} ./order-service
+                docker build -t ${ECR_REGISTRY}/tastygo/gateway:${IMAGE_TAG} ./services/gateway
+                docker build -t ${ECR_REGISTRY}/tastygo/user-service:${IMAGE_TAG} ./services/user-service
+                docker build -t ${ECR_REGISTRY}/tastygo/product-service:${IMAGE_TAG} ./services/product-service
+                docker build -t ${ECR_REGISTRY}/tastygo/order-service:${IMAGE_TAG} ./services/order-service
                 docker build -t ${ECR_REGISTRY}/tastygo/frontend:${IMAGE_TAG} ./frontend
                 """
             }
