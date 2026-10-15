@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: my-zomato-frontend:latest
+          image: public.ecr.aws/m7a6n8x2/tastygo-frontend
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -71,7 +71,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: my-zomato-gateway:latest
+          image: public.ecr.aws/m7a6n8x2/tastygo-gateway:latest
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -148,7 +148,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: my-zomato-user-service:latest
+          image: public.ecr.aws/m7a6n8x2/tastygo-user-service:latest
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -234,7 +234,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: my-zomato-product-service:latest
+          image: public.ecr.aws/m7a6n8x2/tastygo-product-service:latest
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -314,7 +314,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: my-zomato-order-service:latest
+          image: public.ecr.aws/m7a6n8x2/tastygo-order-service:latest
           imagePullPolicy: IfNotPresent
 
           ports:
