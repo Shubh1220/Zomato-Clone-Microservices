@@ -113,6 +113,7 @@ spec:
         name: mysql-data
 
       spec:
+        storageClassName: tastygo-gp3
         accessModes:
           - ReadWriteOnce
 
