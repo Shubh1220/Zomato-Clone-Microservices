@@ -1,120 +1,77 @@
-# TastyGo: Food-Delivery Microservices on Kubernetes
+# 🍔 TastyGo — Food Delivery Microservices Application
 
-A food-delivery platform built as separate services and taken through the full DevOps path: a
-working application, Kubernetes manifests, a Helm chart, Terraform for AWS (EKS + ECR), and a
-Jenkins CI/CD pipeline that builds, scans, pushes and deploys it.
+TastyGo is a food delivery application developed using a microservices architecture. The project demonstrates application containerization, backend service separation, database integration, and deployment using Docker and Kubernetes.
 
-```
-Restaurants → Menu → Cart → Login → Checkout → Place Order → Order Status → My Orders
-```
+The project is part of my hands-on learning journey in DevOps and cloud technologies.
 
-> **Naming:** "TastyGo" is an original name. The app is modelled on the general shape of
-> food-delivery apps, not on any company's branding. Restaurants, menu items and prices are
-> fictional seed data (`db/init.sql`).
+## 🚀 Project Overview
 
-## Contents
+TastyGo is designed to demonstrate how a food delivery application can be divided into independent services that communicate through APIs.
 
-- [What's in the project](#whats-in-the-project)
-- [Architecture](#architecture)
-- [Tech stack](#tech-stack)
-- [Repository layout](#repository-layout)
-- [Prerequisites](#prerequisites)
-- [Phase 1: Application](#phase-1-application)
-- [Phase 2: Kubernetes manifests](#phase-2-kubernetes-manifests)
-- [Phase 3: Helm chart](#phase-3-helm-chart)
-- [Phase 4: Terraform (EKS + ECR)](#phase-4-terraform-eks--ecr)
-- [Phase 5: Jenkins CI/CD](#phase-5-jenkins-cicd)
-- [From zero to deployed: suggested order](#from-zero-to-deployed-suggested-order)
-- [Configuration reference](#configuration-reference)
-- [Security notes](#security-notes)
-- [Troubleshooting](#troubleshooting)
-- [Verification status](#verification-status)
-- [Known limitations](#known-limitations)
-- [Cleaning up](#cleaning-up)
+### Key Features
 
-## What's in the project
+- React-based frontend
+- Node.js and Express.js backend services
+- API Gateway
+- User Service
+- Product Service
+- Order Service
+- MySQL database integration
+- Docker containerization
+- Docker Compose for local development
+- Kubernetes deployment manifests
+- KIND for local Kubernetes testing
+- Helm chart for Kubernetes resource management
+- AWS deployment practice using EKS and ECR
 
-| Phase | What you get | Where |
-|---|---|---|
-| 1. Application | 4 Node.js microservices + React frontend + MySQL, run with Docker Compose | `services/`, `frontend/`, `db/`, `docker-compose.yml` |
-| 2. Kubernetes | Plain manifests: Namespace, Deployments, Services, ConfigMaps, Secret, Ingress, PV/PVC, StatefulSet, HPAs, probes, resource limits, RBAC | `k8s/` |
-| 3. Helm | One chart packaging all of the above, with KIND and EKS value overlays | `helm/tastygo/` |
-| 4. Terraform | VPC, EKS cluster, ECR repositories, IAM roles for the cluster add-ons and for Jenkins | `terraform/` |
-| 5. Jenkins | A `Jenkinsfile`: validate chart, build and Trivy-scan images, push to ECR, `helm upgrade --atomic` to EKS, smoke test | `Jenkinsfile`, `jenkins/` |
+## 🛠️ Technology Stack
 
-Each phase builds on the previous one, and each folder has its own README with more detail.
-
-## Architecture
-
-### Runtime
-
-![TastyGo runtime architecture](images/architecture.gif)
-
-- The frontend only ever calls `/api` on its own origin. With Docker Compose the frontend's nginx
-  forwards `/api` to the gateway; on Kubernetes the Ingress routes `/api` to the gateway directly.
-- **Each service owns its own database** (`userdb`, `productdb`, `orderdb`) on one MySQL server.
-  No service reads another service's tables.
-- `order-service` calls `product-service` over HTTP at checkout to fetch real prices, so the
-  total is computed server-side and a client cannot tamper with it.
-- Authentication is stateless: `user-service` issues a JWT, and `order-service` verifies it with
-  the same `JWT_SECRET`.
-
-### Delivery pipeline
-
-![TastyGo Jenkins CI/CD pipeline](images/pipeline.gif)
-
-### AWS footprint (Phase 4)
-
-| Resource | Purpose |
+| Category | Technologies |
 |---|---|
-| VPC, 2 public + 2 private subnets, NAT gateway | Network; nodes run in private subnets |
-| EKS cluster + managed node group (2 to 4 `t3.medium`) | Runs the workloads |
-| EKS add-ons: coredns, kube-proxy, vpc-cni, metrics-server, EBS CSI driver | Cluster basics; metrics-server feeds the HPAs, EBS CSI provides the MySQL volume |
-| ECR: `tastygo/gateway`, `user-service`, `product-service`, `order-service`, `frontend` | Image registry (scan on push, lifecycle policy) |
-| IAM roles (IRSA) for the EBS CSI driver and the AWS Load Balancer Controller | Least-privilege access for in-cluster controllers |
-| Optional IAM role + instance profile for Jenkins | ECR push and cluster access without stored AWS keys |
+| Frontend | React.js |
+| Backend | Node.js, Express.js |
+| Database | MySQL |
+| Containerization | Docker, Docker Compose |
+| Orchestration | Kubernetes, KIND |
+| Package Management | Helm |
+| Cloud Platform | AWS |
+| Container Registry | Amazon ECR |
+| Version Control | Git, GitHub |
+| Operating System | Linux |
 
-## Tech stack
+![Architecture](images/architecture.gif)
 
-| Area | Technology |
-|---|---|
-| Frontend | React 18, Vite, React Router, served by nginx |
-| Backend | Node.js 20, Express, `mysql2`, JWT (`jsonwebtoken`), `bcryptjs` |
-| Gateway | Express + `http-proxy-middleware` |
-| Database | MySQL 8 (StatefulSet on Kubernetes) |
-| Containers | Docker, Docker Compose (multi-stage frontend build, non-root service images, health checks) |
-| Orchestration | Kubernetes (KIND locally, Amazon EKS in AWS), ingress-nginx / AWS Load Balancer Controller |
-| Packaging | Helm 3 |
-| Infrastructure as code | Terraform (OpenTofu also works), `terraform-aws-modules` for VPC/EKS/IAM |
-| Registry | Amazon ECR |
-| CI/CD | Jenkins (declarative pipeline), GitHub webhook, Trivy image scanning |
-| Version control | Git + GitHub |
+## 🏗️ Application Architecture
 
-## Repository layout
-
+```text
+Internet → Ingress ─┬─► Frontend (React + nginx)
+                    └─► Gateway (Node/Express, the "backend" tier)
+                            ├─► user-service     ─┐
+                            ├─► product-service  ─┼─► MySQL (StatefulSet + PVC)
+                            └─► order-service    ─┘      one database per service
+                                    └─► product-service (price lookup)
 ```
-zomato-clone-microservices/
-├── db
-│   └── init.sql
-├── services
-│   ├── gateway
-│   │   ├── Dockerfile
-│   │   └── ... application files
-│   ├── order-service
-│   │   ├── Dockerfile
-│   │   └── ... application files
-│   ├── product-service
-│   │   ├── Dockerfile
-│   │   └── ... application files
-│   └── user-service
-│       ├── Dockerfile
-│       └── ... application files
+
+## 📂 Project Structure
+
+```text
+Zomato-Clone-Microservices/
+│
 ├── frontend/
-│   ├── Dockerfile
-│   └── ... application files
+├── services/
+│   ├── gateway/
+│   ├── user-service/
+│   ├── product-service/
+│   └── order-service/
+│
+├── db/
+│   └── init.sql
+│
 ├── docker-compose.yaml
-├──k8s
-│   ├── configmap.yaml
+├── kind-cluster.yaml
+│
+├── k8s/
+│   ├── configmap.yaml
 │   ├── deployment.yaml
 │   ├── hpa.yaml
 │   ├── ingress.yaml
@@ -124,372 +81,494 @@ zomato-clone-microservices/
 │   ├── rbac.yaml
 │   ├── secrets.yaml
 │   ├── service.yaml
-│   └── statefulset.yaml
-├── kind-cluster.yaml
+│   ├── statefulset.yaml
+│   └── storageclass.yaml
 ├── helm/
 │   └── tastygo/
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-├── terraform/
-│   ├── versions.tf
-│   ├── variables.tf
-│   ├── vpc.tf
-│   ├── iam.tf
-│   ├── ecr.tf
-│   ├── eks.tf
-│   ├── outputs.tf
-├── images
-│   ├── architecture.gif
-│   └── pipeline.gif
-├── Jenkinsfile
-├── .gitignore
+│
+├── images/
+│   └── architecture.gif
+│
 └── README.md
 ```
 
-## Prerequisites
+*Note: Confirm the directory and filenames against your current repository. Remove any entries that do not exist.*
 
-| Tool | Needed for |
-|---|---|
-| Docker | every phase (building images, Compose, KIND) |
-| Node.js 20+ | running services or the frontend without Docker |
-| `kind`, `kubectl`, `helm` | running deployment or services |
-| Terraform >= 1.5  AWS CLI v2, AWS account | initialisation, validation and format code |
-| A Jenkins host (EC2 suggested) with docker, aws, kubectl, helm, trivy | pipeline stages |
+## ⚙️ Getting Started
 
-## Phase 1: Application
+### Prerequisites
 
-### Run with Docker Compose
+Install the tools needed for the workflow you want to run:
+
+- Git
+- Docker
+- Docker Compose
+- Node.js and npm, if running services directly
+- KIND
+- kubectl
+- Helm
+
+AWS CLI is needed only for AWS-related tasks.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Shubh1220/Zomato-Clone-Microservices.git
+cd Zomato-Clone-Microservices
+```
+
+### 2. Run with Docker Compose
+
+Review the Compose file and configure the required environment variables before starting the application.
 
 ```bash
 docker compose up -d --build
-docker compose ps             # wait until services show (healthy)
 ```
 
-Open **http://localhost:8080**. Register an account, pick a restaurant, add items, check out, and
-watch the order status page update on its own as the order moves through
-`PLACED → CONFIRMED → PREPARING → OUT_FOR_DELIVERY → DELIVERED`.
-
-Only the frontend is published to the host (port 8080). The services and MySQL are reachable
-only inside the Compose network.
+Check the containers:
 
 ```bash
-docker compose logs -f order-service        # follow one service
-docker compose exec mysql mysql -u root -p  # inspect the databases (prompts for MYSQL_ROOT_PASSWORD)
-docker compose down                         # stop, keep data
-docker compose down -v                      # stop and wipe the database volume
+docker compose ps
 ```
 
-`db/init.sql` runs only the first time MySQL starts on an empty volume. After editing it, run
-`docker compose down -v` to re-initialise.
-
-### Try the API directly
+View application logs:
 
 ```bash
-BASE=http://localhost:8080/api
-
-TOKEN=$(curl -s -X POST $BASE/users/register -H 'Content-Type: application/json' \
-  -d '{"name":"Test User","email":"test@example.com","password":"password123"}' \
-  | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
-
-curl -s $BASE/restaurants
-curl -s $BASE/restaurants/2/menu
-
-curl -s -X POST $BASE/orders -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"restaurantId":2,"items":[{"menuItemId":4,"quantity":2},{"menuItemId":6,"quantity":1}],"deliveryAddress":"221B Baker Street"}'
-# -> total "620.00" (2 x 250 + 120), computed by the server
-
-curl -s $BASE/orders -H "Authorization: Bearer $TOKEN"     # My Orders
+docker compose logs -f
 ```
 
-### API reference (through the gateway)
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| POST | `/api/users/register` | no | Create an account, returns a JWT |
-| POST | `/api/users/login` | no | Log in, returns a JWT |
-| GET | `/api/users/me` | yes | Current user |
-| GET | `/api/restaurants` | no | List restaurants |
-| GET | `/api/restaurants/:id` | no | One restaurant |
-| GET | `/api/restaurants/:id/menu` | no | A restaurant's menu |
-| POST | `/api/orders` | yes | Checkout: `{restaurantId, items:[{menuItemId, quantity}], deliveryAddress}` |
-| GET | `/api/orders` | yes | My Orders (newest first) |
-| GET | `/api/orders/:id` | yes (owner only) | Order status and items |
-
-Each service also exposes `/health` (used by Docker health checks and Kubernetes probes), and
-`product-service` has an internal `POST /api/menu-items/batch` used by `order-service`.
-
-### Run without Docker (development)
-
-You need a local MySQL 8. Load the schema and create the app user once:
+Stop the application:
 
 ```bash
-mysql -u root -p < db/init.sql        # run once; the seed INSERTs are not idempotent
-mysql -u root -p -e "
-  CREATE USER 'appuser'@'%' IDENTIFIED WITH mysql_native_password BY 'apppassword';
-  GRANT ALL PRIVILEGES ON userdb.*    TO 'appuser'@'%';
-  GRANT ALL PRIVILEGES ON productdb.* TO 'appuser'@'%';
-  GRANT ALL PRIVILEGES ON orderdb.*   TO 'appuser'@'%';
-  FLUSH PRIVILEGES;"
+docker compose down
 ```
 
-Then start each piece in its own terminal (run `npm install` once in each folder first):
+## ☸️ Kubernetes Deployment with KIND
+
+Create the local cluster using your KIND configuration, if available:
 
 ```bash
-export DB_HOST=127.0.0.1 DB_USER=your-user-name DB_PASSWORD=your-password JWT_SECRET=your-jwt-secret
-
-cd services/user-service    && DB_NAME=userdb    PORT=4001 npm start
-cd services/product-service && DB_NAME=productdb PORT=4002 npm start
-cd services/order-service   && DB_NAME=orderdb   PORT=4003 STAGE_INTERVAL_MS=3000 \
-                               PRODUCT_SERVICE_URL=http://localhost:4002 npm start
-cd services/gateway         && PORT=4000 \
-                               USER_SERVICE_URL=http://localhost:4001 \
-                               PRODUCT_SERVICE_URL=http://localhost:4002 \
-                               ORDER_SERVICE_URL=http://localhost:4003 npm start
-cd frontend                 && npm run dev        # http://localhost:5173
+kind create cluster --config kind-cluster.yaml
 ```
 
-The Vite dev server proxies `/api` to the gateway at `http://localhost:4000`
-(override with `VITE_GATEWAY_URL`), so no CORS setup is needed.
-
-## Phase 2: Kubernetes manifests
-
-Deploy the application to a Kubernetes cluster such as KIND for local practice or EKS for a cloud deployment.
-
-| Resource type | Where |
-|---|---|
-| Namespace | `00-namespace.yaml` |
-| ConfigMap (shared config; MySQL init SQL) | `01-configmap.yaml`, `05-mysql-init-configmap.yaml`, `06-mysql-grants-config.yaml` |
-| Secret (DB credentials, JWT secret: **placeholders**) | `02-secrets.yaml` |
-| RBAC (ServiceAccount, Role, RoleBinding, read-only, namespace-scoped) | `03-rbac.yaml` |
-| StatefulSet + headless Service (MySQL) | `04-statefulset.yaml` |
-| Deployment + Service + HorizontalPodAutoscaler, with requests/limits and liveness/readiness probes | `10`-`14-*.yaml` (user, product, order, gateway, frontend) |
-| Ingress (`/` to frontend, `/api` to gateway) | `15-ingress.yaml` |
-
-### Deploy to a local KIND cluster
+Check the cluster:
 
 ```bash
-# 1. Cluster, ingress controller, metrics-server (needed for the HPAs)
-kind create cluster --config k8s/kind/kind-config.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller --timeout=120s
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-kubectl patch deployment metrics-server -n kube-system --type=json \
-  -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
-
-# 2. Build the images and load them into the cluster
-for svc in gateway user-service product-service order-service; do
-  docker build -t my-zomato-app/$svc:latest ./services/$svc
-  kind load docker-image my-zomato-app/$svc:latest
-done
-docker build -t my-zomato-app/frontend:latest ./frontend
-kind load docker-image my-zomato-app/frontend:latest
-
-# 3. Apply
-kubectl apply -f k8s/00-namespace.yaml
-kubectl apply -f k8s/
-
-# 4. Watch it come up
-kubectl get pods -n my-zomato-app -w
-kubectl get pvc,pv,hpa,ingress -n my-zomato-app
-```
-
-Open **http://localhost/** (KIND maps ports 80/443 to the node).
-
-On KIND the MySQL volume is a hostPath inside the KIND node container, so deleting the cluster
-deletes the data. Use either the raw manifests **or** Helm (next phase) in a given cluster, not
-both: they own the same resource names and Helm will refuse to adopt them.
-
-## Phase 3: Helm chart
-
-`helm/tastygo` packages everything from Phase 2. The five services are defined once in
-`values.yaml` and rendered by loops in the Deployment, Service and HPA templates.
-
-```bash
-helm lint helm/tastygo
-helm template tastygo helm/tastygo \
-  --namespace my-zomato-app
-
-# KIND (after the cluster, ingress-nginx, metrics-server and image loading from Phase 2)
-helm upgrade --install tastygo helm/tastygo \
-  --namespace my-zomato-app \
-  --create-namespace \
-  --wait \
-  --timeout 5m
-
-helm status tastygo -n my-zomato-app
-helm history tastygo -n my-zomato-app
-```
-
-| Setting | KIND (`values.yaml`) | 
-|---|---|---|
-| `global.imageRegistry` | empty (images loaded locally) | your ECR registry URL |
-| `global.imageTag` | `latest` | build number + git SHA |
-| `mysql.persistence.mode` | `static` (hostPath PV) | `dynamic` (gp3 StorageClass) |
-| `ingress.className` | `nginx` | `alb` |
-| Secrets | placeholders via `--set` | existing Secret (`secret.existingSecret`) |
-
-Resource names are intentionally not prefixed with the release name (`gateway`, `mysql`, ...)
-because the frontend's `nginx.conf` proxies to the host name `gateway`. The consequence is one
-release per namespace.
-
-## Phase 4: Terraform (EKS + ECR)
-
-Describe AWS infrastructure as code and create the resources needed to run the application in EKS.
-
-> **Cost:** this is not free-tier. Expect roughly $5 to $6 per day while it runs (EKS control
-> plane, NAT gateway, two nodes, ALB, EBS). Destroy it when you're not using it, in the order
-> shown in [Cleaning up](#cleaning-up).
-
-```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars    # restrict the API endpoint CIDR to your IP
-terraform init
-terraform fmt -check
-terraform validate
-terraform plan                              # about 15 minutes
-
-$(terraform output -raw configure_kubectl)      # points kubectl at the cluster
+kubectl cluster-info
 kubectl get nodes
-kubectl apply -f manifests/gp3-storageclass.yaml
 ```
 
-## Phase 5: Jenkins CI/CD
-
-Automate application delivery from GitHub to Docker, Amazon ECR, and Amazon EKS.
-
-| Stage | What happens | Runs on |
-|---|---|---|
-| Checkout | Clone, tag images `<build number>-<git sha>` | every build |
-| Validate Helm chart | `helm lint` + `helm template` | every build |
-| Build and scan images | 5 images in parallel, Trivy HIGH/CRITICAL scan | every build |
-| Push to ECR | Unique tags, no `latest` | `main` or `FORCE_DEPLOY` |
-| Deploy to EKS | Create app Secret from Jenkins credentials, `helm upgrade --install --atomic --wait` | `main` or `FORCE_DEPLOY` |
-
-Setup in short:
-
-1. In `terraform/terraform.tfvars` set `create_jenkins_role = true`, apply, and attach the
-   `jenkins_instance_profile_name` output to the Jenkins EC2 instance. No AWS keys are stored
-   in Jenkins.
-2. Install on the Jenkins host: Java 17, Jenkins, docker, kubectl, helm, trivy (AWS CLI v2 ships
-   with Amazon Linux 2023). Plugins: Git, GitHub, Pipeline, Credentials Binding, Timestamper.
-3. Add three Secret-text credentials: `tastygo-db-password`, `tastygo-mysql-root-password`,
-   `tastygo-jwt-secret`.
-4. Edit the three `EDIT THESE` values in the Jenkinsfile (`AWS_REGION`, `AWS_ACCOUNT_ID`,
-   `EKS_CLUSTER`).
-5. Create a *Pipeline script from SCM* job on branch `main`, and add a GitHub webhook to
-   `http://<jenkins-host>:8080/github-webhook/`.
-
-Behaviours worth knowing: a failed upgrade rolls back automatically (`--atomic`); passwords never
-enter Helm release history; Trivy only reports until you set `TRIVY_EXIT_CODE` to `'1'`; there
-are no unit tests yet, so the image build is the compile check.
-
-## From zero to deployed: suggested order
-
-1. **Run Phase 1 locally** with Docker Compose and click through the whole flow.
-2. **Validate without spending money:** `helm lint helm/tastygo`, `helm template ...`,
-   `terraform init && terraform plan`. These are the first real runs of the Helm and Terraform
-   code, so fix anything they report before going further.
-3. **Try Kubernetes on KIND** with the raw manifests (Phase 2), then delete the cluster and try
-   the Helm chart (Phase 3).
-4. **Create the AWS infrastructure** (Phase 4), install the Load Balancer Controller, and do one
-   manual image push and `helm install` to prove the path.
-5. **Set up Jenkins** (Phase 5) and let a push to `main` do steps 3 to 4 automatically.
-
-## Configuration reference
-
-### Environment variables read by the services
-
-| Variable | Used by | Meaning |
-|---|---|---|
-| `PORT` | all services | listen port (gateway 4000, user 4001, product 4002, order 4003) |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` | user, product, order | MySQL connection |
-| `DB_NAME` | user, product, order | `userdb`, `productdb`, `orderdb` respectively |
-| `JWT_SECRET` | user, order | must be identical in both |
-| `PRODUCT_SERVICE_URL` | order, gateway | where to reach product-service |
-| `USER_SERVICE_URL`, `ORDER_SERVICE_URL` | gateway | upstreams |
-
-### Where secrets live in each environment
-
-| Environment | Source |
-|---|---|
-| KIND with raw manifests | `k8s/02-secret.yaml` (placeholders; demo only) |
-| KIND with Helm | `--set secret.*` |
-| EKS | a Secret created outside the chart (the Jenkins pipeline does this from Jenkins credentials) |
-
-## Security notes
-
-- **Placeholders everywhere:** `change-me-...` values in `k8s/02-secrets.yaml` and
-  `helm/tastygo/values.yaml` are for local learning only. Never reuse them.
-- Passwords are stored as bcrypt hashes; order totals are computed server-side; users can read
-  only their own orders (403 otherwise).
-- Service containers run as a non-root user. The RBAC role is read-only and namespace-scoped, and
-  excludes Secrets.
-- Kubernetes Secrets are base64-encoded, not encrypted, by default. For real use look at Sealed
-  Secrets, External Secrets or AWS Secrets Manager.
-- The EKS API endpoint is public by default (IAM-authenticated). Restrict
-  `cluster_endpoint_public_access_cidrs` to your IP.
-- The Jenkins role gets cluster-admin through an EKS access entry. Fine for learning; tighten it
-  before sharing the Jenkins server. Keep port 8080 closed to the world, and protect the `main`
-  branch, since anyone who can change the Jenkinsfile there can deploy.
-- There is no TLS and there are no NetworkPolicies. See [Known limitations](#known-limitations).
-
-## Troubleshooting
-
-| Symptom | Likely cause |
-|---|---|
-| `docker compose` frontend loads but shows "Could not load restaurants" | Services still starting; check `docker compose ps` and `docker compose logs gateway` |
-| Services restart-loop on MySQL auth | `DB_USER`/`DB_PASSWORD` in `k8s/secrets.yaml` differ from what MySQL initialised with. MySQL reads them only on first start; run `docker compose down -v` and start again |
-| Pods `ImagePullBackOff` on KIND | Images weren't loaded with `kind load docker-image` |
-| HPAs show `<unknown>` CPU | metrics-server isn't installed (or the KIND `--kubelet-insecure-tls` patch is missing) |
-| Ingress has no address on EKS | AWS Load Balancer Controller isn't installed or can't discover subnets |
-| `helm install` fails with "invalid ownership metadata" | The raw manifests are still deployed in that namespace; delete them first |
-| MySQL pod `Pending` on EKS | gp3 StorageClass not applied, or the EBS CSI add-on isn't ready |
-| Jenkins: `Unauthorized` from kubectl | Jenkins role has no EKS access entry (`create_jenkins_role` / `jenkins_role_arn`) |
-| Jenkins: ECR push denied | Repositories don't exist yet, or the instance profile isn't attached |
-
-## Verification status
-
-This was written in an environment without a Docker daemon, a Kubernetes cluster, or access to
-AWS or the Terraform/Helm registries, so **not every phase has been run end to end.** What was and
-wasn't checked:
-
-| Phase | Checked | Not yet checked |
-|---|---|---|
-| 1. Application | Full API flow through the gateway against a real MySQL 8: register, login, browse, menu, checkout with server-side totals, automatic status progression, order history, wrong-password / no-token / other-user's-order rejections. Frontend production build, and its dev proxy reaching the gateway. | Clicking through the UI in a browser. Building the Docker images and running `docker compose`. |
-| 2. Kubernetes | All manifests parse. Every env var and Service DNS name was cross-checked against what the service code actually reads. | Applying them to a cluster. |
-| 3. Helm | Template blocks balanced, every `.Values` path resolves, overlays only override existing keys, rendered env matches the code. | `helm lint` and `helm template` (Helm wasn't installable). |
-| 4. Terraform | Formatting and syntax (`tofu fmt`), variables declared and used, no duplicate blocks, no dependency cycles by inspection, subnet math, ECR names equal the chart's image names. | `init`, `plan`, `apply`. Module versions are from memory. |
-| 5. Jenkins | The Jenkinsfile compiles as Groovy; its 8 shell blocks pass `bash -n`; no credential is interpolated by Groovy. | Running it on Jenkins. |
-
-Nothing in the project is believed broken, but the Helm and Terraform phases in particular are
-most likely to need small fixes on first contact. Step 2 of
-[the suggested order](#from-zero-to-deployed-suggested-order) is where to find them cheaply.
-
-## Known limitations
-
-- **No payments, no images:** checkout creates the order directly, and restaurant "photos" are
-  solid colours.
-- **Order progression is simulated** by a timer in `order-service`, not by a real courier flow.
-- **MySQL is a single replica inside the cluster.** It's a single point of failure and is not
-  backed up. For production, use RDS or an operator with backups.
-- **No unit or integration tests** in the repository yet (the API flow was verified manually).
-- **No TLS, NetworkPolicies, centralised logging, metrics dashboards or alerting.**
-- Order-service progression timers live in process memory: if a pod restarts mid-order, that
-  order stops advancing.
-
-## Cleaning up
+Apply the Kubernetes manifests after reviewing the namespace and resource configuration:
 
 ```bash
-docker compose down -v                         # Phase 1
-kind delete cluster                            # Phases 2 and 3 (local)
+kubectl apply -f k8s/
 ```
 
-For AWS, **order matters**, because the load balancer is created by Kubernetes, outside Terraform:
+Verify deployed resources:
 
 ```bash
-helm uninstall tastygo -n my-zomato-app              # removes the Ingress, so the ALB is deleted
-kubectl get pvc -n my-zomatoa-app                     # wait until the MySQL volume is gone
-helm status tastygo -n my-zomato-app
+kubectl get pods -A
+kubectl get services -A
+kubectl get deployments -A
 ```
+
+## 📦 Helm
+
+The Helm chart can be used to package and manage Kubernetes resources.
+
+Validate the chart:
+
+```bash
+helm lint ./helm/tastygo
+```
+
+Preview the generated manifests:
+
+```bash
+helm template tastygo ./helm/tastygo
+```
+
+Install or upgrade the release:
+
+```bash
+helm upgrade --install tastygo ./helm/tastygo
+```
+
+These commands require a valid chart and a working Kubernetes context.
+
+## ☁️ AWS ECR and EKS Deployment
+
+This section documents how to push TastyGo Docker images to Amazon Elastic Container Registry (ECR) and deploy the application to Amazon Elastic Kubernetes Service (EKS).
+
+**Prerequisites**
+
+- AWS CLI configured with an IAM identity that has the required permissions
+- Docker installed and running
+- `kubectl` installed
+- `eksctl` installed
+- A valid Kubernetes configuration in the `k8s/` directory
+
+### 1. Configure AWS CLI
+
+Check the installed AWS CLI version:
+
+```bash
+aws --version
+```
+
+Configure credentials if required:
+
+```bash
+aws configure
+```
+
+Verify the AWS identity:
+
+```bash
+aws sts get-caller-identity
+```
+
+Set the deployment region:
+
+```bash
+export AWS_REGION=us-east-1
+export CLUSTER_NAME=tastygo-eks
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+```
+
+These examples use `us-east-1`, the region used for the previous TastyGo deployment.
+
+### 2. Create Amazon ECR Repositories
+
+Create one private ECR repository for each application image:
+
+```bash
+aws ecr create-repository --repository-name tastygo-frontend --region $AWS_REGION
+aws ecr create-repository --repository-name tastygo-gateway --region $AWS_REGION
+aws ecr create-repository --repository-name tastygo-user-service --region $AWS_REGION
+aws ecr create-repository --repository-name tastygo-product-service --region $AWS_REGION
+aws ecr create-repository --repository-name tastygo-order-service --region $AWS_REGION
+```
+
+List the repositories:
+
+```bash
+aws ecr describe-repositories --region $AWS_REGION
+```
+
+### 3. Log In to Amazon ECR
+
+Authenticate Docker to the ECR registry:
+
+```bash
+aws ecr get-login-password --region $AWS_REGION \
+  | docker login \
+    --username AWS \
+    --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+```
+
+### 4. Build, Tag, and Push Docker Images
+
+Run these commands from the repository root. Adjust each build path if your Dockerfiles are stored elsewhere.
+
+**Frontend**
+
+```bash
+docker build -t tastygo-frontend ./frontend
+
+docker tag tastygo-frontend:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-frontend:latest
+
+docker push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-frontend:latest
+```
+
+**API Gateway**
+
+```bash
+docker build -t tastygo-gateway ./services/gateway
+
+docker tag tastygo-gateway:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-gateway:latest
+
+docker push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-gateway:latest
+```
+
+**User Service**
+
+```bash
+docker build -t tastygo-user-service ./services/user-service
+
+docker tag tastygo-user-service:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-user-service:latest
+
+docker push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-user-service:latest
+```
+
+**Product Service**
+
+```bash
+docker build -t tastygo-product-service ./services/product-service
+
+docker tag tastygo-product-service:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-product-service:latest
+
+docker push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-product-service:latest
+```
+
+**Order Service**
+
+```bash
+docker build -t tastygo-order-service ./services/order-service
+
+docker tag tastygo-order-service:latest \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-order-service:latest
+
+docker push \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/tastygo-order-service:latest
+```
+
+Verify that images have been uploaded:
+
+```bash
+aws ecr list-images \
+  --repository-name tastygo-frontend \
+  --region $AWS_REGION
+```
+
+Repeat for the other repositories.
+
+### 5. Create an Amazon EKS Cluster
+
+> **Cost warning:** Creating an EKS cluster and worker nodes can incur charges. Check current AWS pricing before proceeding.
+
+Create the cluster and a managed node group:
+
+```bash
+eksctl create cluster \
+  --name $CLUSTER_NAME \
+  --region $AWS_REGION \
+  --nodes 2 \
+  --node-type t3.medium
+```
+
+This command provisions AWS infrastructure and may take several minutes. Confirm that the selected instance type and configuration are suitable and available in your region.
+
+### 6. Connect kubectl to EKS
+
+Update the local Kubernetes configuration:
+
+```bash
+aws eks update-kubeconfig \
+  --region $AWS_REGION \
+  --name $CLUSTER_NAME
+```
+
+Verify the cluster and worker nodes:
+
+```bash
+kubectl get nodes
+kubectl get namespaces
+```
+
+### 7. Update Kubernetes Image References
+
+Before deploying, update the container image fields in your Kubernetes manifests to use the ECR image URIs.
+
+Example:
+
+```yaml
+image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/tastygo-frontend:latest
+```
+
+Replace `ACCOUNT_ID` with your AWS account ID. Use the matching repository and image tag for each service.
+
+Ensure the EKS worker nodes or configured workload identity have the permissions required to pull images from the ECR repositories. Also verify environment variables, database connectivity, Secrets, ConfigMaps, Services, and Ingress configuration.
+
+### 8. Deploy the Application to EKS
+
+Review the manifests before applying them. If the namespace manifest creates a dedicated namespace, create that namespace first:
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+```
+
+Then apply the remaining manifests, adjusting the paths to match your repository:
+
+```bash
+kubectl apply -f k8s/
+```
+
+Check the deployment:
+
+```bash
+kubectl get pods -A
+kubectl get deployments -A
+kubectl get services -A
+kubectl get ingress -A
+```
+
+Inspect application logs if a workload fails:
+
+```bash
+kubectl logs <pod-name> -n <namespace>
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+Replace the placeholders with actual values. If your manifests require a particular application order or namespace, follow that configuration.
+
+### 9. Verify EKS and ECR
+
+Check the EKS cluster:
+
+```bash
+aws eks describe-cluster \
+  --name $CLUSTER_NAME \
+  --region $AWS_REGION \
+  --query 'cluster.status'
+```
+
+List ECR repositories:
+
+```bash
+aws ecr describe-repositories \
+  --region $AWS_REGION \
+  --query 'repositories[].repositoryName'
+```
+
+Check application pods:
+
+```bash
+kubectl get pods -A
+```
+
+A successful command alone does not prove that the entire application works. Test the frontend and API endpoints and verify database operations.
+
+### 10. AWS Cleanup
+
+When you finish practising, delete the EKS cluster created with `eksctl`:
+
+```bash
+eksctl delete cluster \
+  --name $CLUSTER_NAME \
+  --region $AWS_REGION
+```
+
+Verify that the cluster no longer appears:
+
+```bash
+aws eks list-clusters --region $AWS_REGION
+```
+
+If you also want to delete the ECR repositories and their images, run:
+
+```bash
+aws ecr delete-repository \
+  --repository-name tastygo-frontend \
+  --region $AWS_REGION \
+  --force
+
+aws ecr delete-repository \
+  --repository-name tastygo-gateway \
+  --region $AWS_REGION \
+  --force
+
+aws ecr delete-repository \
+  --repository-name tastygo-user-service \
+  --region $AWS_REGION \
+  --force
+
+aws ecr delete-repository \
+  --repository-name tastygo-product-service \
+  --region $AWS_REGION \
+  --force
+
+aws ecr delete-repository \
+  --repository-name tastygo-order-service \
+  --region $AWS_REGION \
+  --force
+```
+
+Check the AWS Console for any remaining billable resources, including load balancers, EBS volumes, snapshots, Elastic IP addresses, and NAT gateways. Do not delete shared networking or IAM resources without confirming they are no longer needed.
+
+**Current status:** The previous TastyGo EKS cluster, ECR repositories, associated leftover EBS volume, load balancer(s), and EC2 instance were reported deleted. The commands above describe how to provision a new deployment; they do not indicate that these resources currently exist.
+
+Before deploying again, review the required resources, IAM permissions, network configuration, and potential AWS costs.
+
+## 🔐 Security Best Practices
+
+- Do not commit passwords, API keys, or credentials.
+- Use environment variables for application configuration.
+- Restrict access to databases and internal services.
+- Use appropriate IAM permissions and security groups.
+- Review container images and dependencies.
+- Configure Kubernetes resource limits and health checks where appropriate.
+- Check AWS resources after completing a deployment to avoid unexpected charges.
+
+## 🧪 Troubleshooting
+
+### Docker
+
+```bash
+docker ps
+docker compose ps
+docker compose logs -f
+```
+
+### Kubernetes
+
+```bash
+kubectl get pods -A
+kubectl get events -A
+kubectl get services -A
+```
+
+For a specific pod:
+
+```bash
+kubectl describe pod <pod-name> -n <namespace>
+kubectl logs <pod-name> -n <namespace>
+```
+
+Replace the placeholders with the correct pod name and namespace.
+
+## 📚 Learning Outcomes
+
+Through this project, I practised:
+
+- Microservices application architecture
+- REST API-based service communication
+- Docker and Docker Compose
+- Kubernetes deployments and services
+- Local Kubernetes testing with KIND
+- Helm chart management
+- AWS container deployment concepts
+- Git and GitHub version control
+- Cloud resource cleanup and cost awareness
+
+## 🔮 Future Improvements
+
+- Add automated unit and integration tests.
+- Improve monitoring and centralized logging.
+- Add container image vulnerability scanning.
+- Improve application health checks.
+- Implement automated CI/CD.
+- Explore Terraform for infrastructure as code.
+
+## 👨‍💻 Author
+
+**Shubh Rastogi**
+
+- GitHub: https://github.com/Shubh1220
+- LinkedIn: https://www.linkedin.com/in/shubh-rastogi-6a32273a1/
+
+## 📄 License
+
+A license can be added if the project is intended for distribution under a specific open-source license.
+
+---
+
+*This project is intended for educational and demonstration purposes. Deployment commands and configuration should be verified against the current repository before use.*
