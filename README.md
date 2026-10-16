@@ -43,15 +43,6 @@ TastyGo is designed to demonstrate how a food delivery application can be divide
 
 ![Architecture](images/architecture.gif)
 
-```
-Internet → Ingress ─┬─► Frontend (React + nginx)
-                    └─► Gateway (Node/Express, the "backend" tier)
-                            ├─► user-service     ─┐
-                            ├─► product-service  ─┼─► MySQL (StatefulSet + PVC)
-                            └─► order-service    ─┘      one database per service
-                                    └─► product-service (price lookup)
-```
-
 ## 📂 Project Structure
 
 ```text
