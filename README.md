@@ -39,9 +39,9 @@ TastyGo is designed to demonstrate how a food delivery application can be divide
 | Version Control | Git, GitHub |
 | Operating System | Linux |
 
-![Architecture](images/architecture.gif)
-
 ## 🏗️ Application Architecture
+
+![Architecture](images/architecture.gif)
 
 ```
 Internet → Ingress ─┬─► Frontend (React + nginx)
