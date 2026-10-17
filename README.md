@@ -83,8 +83,6 @@ Zomato-Clone-Microservices/
 └── README.md
 ```
 
-*Note: Confirm the directory and filenames against your current repository. Remove any entries that do not exist.*
-
 ## ⚙️ Getting Started
 
 ### Prerequisites
@@ -409,8 +407,6 @@ kubectl logs <pod-name> -n <namespace>
 kubectl describe pod <pod-name> -n <namespace>
 ```
 
-Replace the placeholders with actual values. If your manifests require a particular application order or namespace, follow that configuration.
-
 ### 9. Verify EKS and ECR
 
 Check the EKS cluster:
@@ -524,8 +520,6 @@ kubectl describe pod <pod-name> -n <namespace>
 kubectl logs <pod-name> -n <namespace>
 ```
 
-Replace the placeholders with the correct pod name and namespace.
-
 ## 📚 Learning Outcomes
 
 Through this project, I practised:
@@ -544,7 +538,7 @@ Through this project, I practised:
 
 From a real EKS deployment of this architecture. The names in these screenshots come from that run
 (cluster `tastygo-eks`, namespace `my-zomato-app`, a UI branded *TastyGo*, images in Amazon ECR Public);
-the manifests in this repo use `foodhub` names, but the layout is the same.
+the manifests in this repo use `tastygo` names, but the layout is the same.
 
 **AWS infrastructure**
 
@@ -601,4 +595,3 @@ A license can be added if the project is intended for distribution under a speci
 
 ---
 
-*This project is intended for educational and demonstration purposes. Deployment commands and configuration should be verified against the current repository before use.*
