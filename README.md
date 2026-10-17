@@ -540,6 +540,45 @@ Through this project, I practised:
 - Git and GitHub version control
 - Cloud resource cleanup and cost awareness
 
+## Screenshots
+
+From a real EKS deployment of this architecture. The names in these screenshots come from that run
+(cluster `tastygo-eks`, namespace `my-zomato-app`, a UI branded *TastyGo*, images in Amazon ECR Public);
+the manifests in this repo use `foodhub` names, but the layout is the same.
+
+**AWS infrastructure**
+
+| EC2 build host | EKS cluster |
+|---|---|
+| ![EC2 instance](screenshots/aws-ec2.png) | ![EKS cluster](screenshots/aws-eks.png) |
+| The `zomato-clone` instance (running, 3/3 status checks) with its IAM role for EKS access. | `tastygo-eks`: Active, Kubernetes 1.34. |
+
+| CloudFormation stack | Amazon ECR |
+|---|---|
+| ![CloudFormation stack](screenshots/aws-cloudformation.png) | ![ECR repositories](screenshots/aws-ecr.png) |
+| `eksctl` created the cluster through a stack in `CREATE_COMPLETE`. | One repository per service: frontend, gateway, order, product, user. |
+
+**Images and cluster**
+
+| Docker images built on the build host | Worker nodes |
+|---|---|
+| ![docker images](screenshots/docker-images.png) | ![kubectl get nodes](screenshots/kubectl-nodes.png) |
+| Five service images plus the `node:20-alpine` and `nginx:1.27-alpine` bases. | Two nodes `Ready` on `v1.34.11-eks`, followed by `kubectl get all` for the namespace. |
+
+**Workloads**
+
+| Deployments, StatefulSet and pods | Services, ConfigMaps and Secret |
+|---|---|
+| ![Deployments and pods](screenshots/kubectl-deployment.png) | ![Services and endpoints](screenshots/kubectl-services.png) |
+| All Deployments `1/1`, `mysql-statefulset` `1/1`, every pod `Running` across both nodes. | ClusterIP Services with their endpoints, the MySQL ConfigMaps and the `mysql-secret`. |
+
+**Persistent storage and the running app**
+
+| MySQL storage | App in the browser |
+|---|---|
+| ![StatefulSet and PVC](screenshots/kubectl-statefulset.png) | ![App in the browser](screenshots/live-browser.png) |
+| The MySQL PVC is `Bound` to an EBS volume (`gp3` StorageClass, EBS CSI driver), with its PV. | The restaurant list served from the cluster. |
+
 ## 🔮 Future Improvements
 
 - Add automated unit and integration tests.
